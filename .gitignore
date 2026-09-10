@@ -1,3 +1,7 @@
+# Local recruiter correspondence / assistant config — not part of the deliverable
+CLAUDE.md
+.claude/
+
 node_modules/
 dist/
 coverage/
