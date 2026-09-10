@@ -1,0 +1,32 @@
+# Overrides for the test/QA environment — applied on top of values.yaml:
+#   helm upgrade --install hn-crawler-test charts/hn-crawler \
+#     -f charts/hn-crawler/values-test.yaml --set image.tag=<sha>
+#
+# Turns persistence on here first (not straight in prod) so the PVC
+# path is exercised before it matters. Still 1 replica: usage.sqlite
+# is single-writer, and autoscaling.enabled+persistence.enabled would
+# mean every replica fighting over the same PVC (see NOTES.txt).
+
+image:
+  tag: test
+
+replicaCount: 1
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 500m
+    memory: 256Mi
+
+persistence:
+  enabled: true
+  size: 256Mi
+  storageClassName: ""
+
+autoscaling:
+  enabled: false
+
+pdb:
+  enabled: false
