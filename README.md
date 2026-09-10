@@ -1,8 +1,9 @@
 # HN Crawler
 
-A small Hacker News crawler that scrapes the top 30 front-page entries
-(rank, title, points, comment count) and supports two filtering
-operations, with every request logged for usage analysis.
+A Hacker News crawler exposed as a NestJS REST API. It scrapes the top
+30 front-page entries (rank, title, points, comment count) and
+supports two filtering operations, with every request logged for
+usage analysis.
 
 ## Requirements
 
@@ -17,39 +18,62 @@ npm install
 ## Usage
 
 ```bash
-# Build once, then run the compiled CLI
 npm run build
-npm start                        # top 30, no filter
-npm start -- --filter=long-titles   # >5-word titles, ordered by comments desc
-npm start -- --filter=short-titles  # <=5-word titles, ordered by points desc
-
-# or run directly against source with ts-node
-npm run dev -- --filter=long-titles
-
-# usage
-npm run help
+npm start
+# or against source directly:
+npm run dev
 ```
 
-Each run prints the applied filter, the result count, and one line
-per entry (`rank`, `points`, `comment count`, `word count`, `title`).
-A `data/usage.sqlite` file is created (gitignored) recording one row
-per request.
+```bash
+curl http://localhost:3000/entries                        # top 30, no filter
+curl http://localhost:3000/entries?filter=long-titles      # >5-word titles, ordered by comments desc
+curl http://localhost:3000/entries?filter=short-titles     # <=5-word titles, ordered by points desc
+curl http://localhost:3000/health                          # liveness/readiness probe target
+```
+
+An invalid `filter` value is rejected with `400` by a `class-validator`
+DTO before it ever reaches the crawler. Each successful `/entries`
+call logs a usage row (timestamp, filter applied, entry/result
+counts, duration) to `data/usage.sqlite` (gitignored) — configurable
+via the `USAGE_DB_PATH` env var, `PORT` selects the HTTP port
+(default `3000`).
 
 ## Docker
 
 ```bash
 docker compose build
-docker compose run --rm crawler                        # top 30, no filter
-docker compose run --rm crawler --filter=long-titles
-docker compose run --rm crawler --help
+docker compose up
+curl http://localhost:3000/entries?filter=long-titles
+docker compose down -v
 ```
 
 `usage.sqlite` is written to a named volume (`hn-crawler-data`) so
-usage history survives across runs. The image is a two-stage build:
-the builder stage compiles TypeScript and better-sqlite3's native
-addon (needs `python3`/`make`/`g++`), the runtime stage copies only
-the compiled output and pruned production `node_modules` — no
-compiler toolchain ships in the final image.
+usage history survives container restarts. The image is a two-stage
+build: the builder stage compiles TypeScript and better-sqlite3's
+native addon (needs `python3`/`make`/`g++`), the runtime stage (same
+`node:20-slim` base, so the compiled addon's ABI still matches) copies
+only the pruned production `node_modules` and `dist/` — no compiler
+toolchain ships in the final image. `HEALTHCHECK` hits `GET /health`
+with a one-line Node script (no `curl` in the slim base image).
+
+## Kubernetes
+
+Basic manifests in `k8s/`: `ConfigMap` (env vars), `Deployment`
+(readiness/liveness probes on `/health`, resource requests/limits),
+`Service` (ClusterIP, port 80 → 3000).
+
+```bash
+kubectl apply -f k8s/configmap.yaml -f k8s/deployment.yaml -f k8s/service.yaml
+```
+
+Replicas are pinned at 1: `usage.sqlite` is single-writer and lives on
+the Pod's own volume (`emptyDir` here — swap for a `PersistentVolumeClaim`
+to survive rescheduling to another node), so more replicas would mean
+separate, unmerged usage histories rather than one shared log. Scaling
+this past 1 would require moving usage tracking to a networked store
+first. `image:` points at the locally built `hn-crawler-starbuilder:local`
+tag — replace it with a registry path before applying outside a local
+cluster.
 
 ## Tests
 
@@ -57,46 +81,55 @@ compiler toolchain ships in the final image.
 npm test
 ```
 
-22 tests cover the word counter, the two filters, the crawler
-(against a captured real HN page fixture, plus an edge case for
-stories with no comments yet), the usage repository, and the
-orchestrating use case (including the crawler-failure path).
+26 tests: the word counter, the two filters, the crawler (against a
+captured real HN page fixture, plus an edge case for stories with no
+comments yet), the usage repository, the orchestrating service
+(including the crawler-failure path), and an end-to-end test
+(`@nestjs/testing` + `supertest`) covering the full HTTP wiring —
+routing, the validation pipe rejecting a bad `filter`, and DI —
+against fake ports, no real network or filesystem access.
 
 ## Design decisions
 
 **Architecture.** The code follows hexagonal architecture (ports &
-adapters), with the direction of each port made explicit in the
-folder name rather than buried in a generic `ports/` bucket:
+adapters) on top of NestJS, with the direction of each port made
+explicit in the folder name rather than buried in a generic `ports/`
+bucket, and the application layer kept free of any NestJS import:
 
 - `src/domain/model` — the `HackerNewsEntry` shape.
   `src/domain/service` — pure business rules with no I/O: `countWords`
   and the two filters (`filterLongTitlesByComments`,
   `filterShortTitlesByPoints`).
 - `src/application/in` — the input port: the `CrawlAndFilterUseCase`
-  interface that any driving adapter (today's CLI, an HTTP controller
-  tomorrow) is allowed to call.
+  interface any driving adapter is allowed to call, plus its
+  `CRAWL_AND_FILTER_USE_CASE` injection token (TS interfaces don't
+  exist at runtime, so NestJS binds/injects by token instead).
   `src/application/out` — the output ports (`HackerNewsCrawlerPort`,
   `UsageRepositoryPort`) the application needs from the outside world,
-  as interfaces.
-  `src/application/service` — `CrawlAndFilterService`, the only class
-  that implements the input port: it orchestrates `domain` and the
-  output ports to crawl, filter, and always record usage — including
-  when the crawl fails, so crawler errors show up in the usage data
-  instead of disappearing silently.
-- `src/infrastructure/adapter/in/cli` — the CLI, the driving adapter
-  that calls `application/in`.
+  each with its own token.
+  `src/application/service` — `CrawlAndFilterService`, a plain class
+  (no `@Injectable()`, no NestJS import at all) implementing the input
+  port: it orchestrates `domain` and the output ports to crawl,
+  filter, and always record usage — including when the crawl fails,
+  so crawler errors show up in the usage data instead of disappearing
+  silently. Being framework-free, it's unit-tested with `new
+  CrawlAndFilterService(fakeCrawler, fakeUsageRepo)` — no
+  `TestingModule`, no Nest bootstrap.
+- `src/infrastructure/adapter/in/rest` — `EntriesController` and
+  `HealthController`, the driving adapters that call `application/in`.
   `src/infrastructure/adapter/out/{crawler,persistence}` — the driven
   adapters implementing `application/out`: `CheerioHackerNewsCrawler`
-  (axios + cheerio) and `SqliteUsageRepository` (better-sqlite3).
+  (axios + cheerio) and `SqliteUsageRepository` (better-sqlite3, with
+  an `OnModuleDestroy` hook so Nest closes the DB handle on shutdown).
+- `src/infrastructure/config/AppModule.ts` — the composition root: the
+  only file that knows both NestJS and the concrete `application/service`
+  classes. Every port is bound with `useFactory` (not `useClass`) so
+  `application/service` never needs a NestJS decorator.
 
 A request always flows one direction — `adapter/in` → `application/in`
 → `application/service` → `application/out` → `adapter/out` — and
-never skips a layer (the CLI never imports an out-adapter directly,
-the service never imports an adapter). This is also what makes the
-service and filter tests run without any network or filesystem access
-— they're given fakes for the two output ports — while the crawler and
-repository are still tested against something close to reality (a
-real captured HTML page, a real temp SQLite file).
+never skips a layer (a controller never imports an out-adapter
+directly, the service never imports an adapter).
 
 **Word counting.** "Words" are whitespace-separated tokens that
 contain at least one letter or digit. A hyphenated compound like
@@ -115,17 +148,17 @@ have no shared container, so the crawler explicitly pairs each
 selectors that could drift out of sync. Fetching more than 30 entries
 walks HN's `?p=N` pagination sequentially. A "discuss" link (a story
 with no comments yet) is treated as 0 comments rather than causing a
-parse error.
+parse error. Rows are parsed as a `toArray().map().filter()` pipeline
+rather than a loop with a mutable accumulator.
 
 **Storage.** Usage tracking uses SQLite (via `better-sqlite3`)
-instead of an external database or cache so the exercise runs with
-zero infrastructure setup (`npm start` just works) while still using
-a real schema and real SQL, migrated automatically on first run. Each
-row records the request timestamp, the filter applied, how many
-entries were crawled vs. returned after filtering, the request
-duration, and the source (`cli` — the only caller today, kept as a
-field since the same use case could be driven by an API later without
-changing the schema).
+instead of an external database or cache so the service runs with
+minimal infrastructure while still using a real schema and real SQL,
+migrated automatically on first run. Each row records the request
+timestamp, the filter applied, how many entries were crawled vs.
+returned after filtering, the request duration, and the source
+(currently always `'api'`, kept as a field since a second driving
+adapter would be a plausible future addition).
 
 **Filtering semantics.** Filtering and sorting are two different pure
 functions rather than one function with a sort-direction flag,
@@ -136,15 +169,16 @@ points) — a shared abstraction would need a branch per call anyway,
 so two small named functions read more clearly than one parameterized
 one.
 
-**What was left out on purpose.** No HTTP API, no database beyond
-SQLite, no retry/backoff logic — none of these were required by the
-exercise, and adding them would be speculative complexity for a
-scraper that runs once per invocation.
+**What was left out on purpose.** No retry/backoff logic on the
+crawler, no auth on the API, no `@nestjs/terminus` for the health
+check (a plain controller is enough) — none of these were required by
+the exercise, and adding them would be speculative complexity.
 
 ## Project structure
 
 ```
 src/
+  main.ts
   domain/
     model/HackerNewsEntry.ts
     service/WordCounter.ts
@@ -155,11 +189,19 @@ src/
     out/UsageRepository.port.ts
     service/CrawlAndFilterService.ts
   infrastructure/
+    config/AppModule.ts
     adapter/
-      in/cli/cli.ts
+      in/rest/EntriesController.ts
+      in/rest/HealthController.ts
+      in/rest/dto/GetEntriesQuery.dto.ts
       out/crawler/CheerioHackerNewsCrawler.ts
       out/persistence/SqliteUsageRepository.ts
 tests/
   unit/
+  e2e/
   fixtures/
+k8s/
+  configmap.yaml
+  deployment.yaml
+  service.yaml
 ```

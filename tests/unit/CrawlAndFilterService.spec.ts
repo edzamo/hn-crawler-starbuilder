@@ -42,7 +42,7 @@ describe('CrawlAndFilterService', () => {
       () => FIXED_DATE,
     );
 
-    const result = await useCase.execute({ entryCount: 2, filter: 'long-titles', source: 'cli' });
+    const result = await useCase.execute({ entryCount: 2, filter: 'long-titles', source: 'api' });
 
     expect(result.entries.map((e) => e.rank)).toEqual([2]);
     expect(usageRepository.records).toHaveLength(1);
@@ -51,7 +51,7 @@ describe('CrawlAndFilterService', () => {
       filterApplied: 'long-titles',
       entryCount: 2,
       resultCount: 1,
-      source: 'cli',
+      source: 'api',
     });
   });
 
@@ -63,7 +63,7 @@ describe('CrawlAndFilterService', () => {
     const usageRepository = new RecordingUsageRepository();
     const useCase = new CrawlAndFilterService(new FakeCrawler(entries), usageRepository);
 
-    const result = await useCase.execute({ entryCount: 2, filter: 'short-titles', source: 'cli' });
+    const result = await useCase.execute({ entryCount: 2, filter: 'short-titles', source: 'api' });
 
     expect(result.entries.map((e) => e.rank)).toEqual([2, 1]);
   });
@@ -83,7 +83,7 @@ describe('CrawlAndFilterService', () => {
     const useCase = new CrawlAndFilterService(new FailingCrawler(), usageRepository, () => FIXED_DATE);
 
     await expect(
-      useCase.execute({ entryCount: 30, filter: 'none', source: 'cli' }),
+      useCase.execute({ entryCount: 30, filter: 'none', source: 'api' }),
     ).rejects.toThrow('network down');
 
     expect(usageRepository.records).toHaveLength(1);

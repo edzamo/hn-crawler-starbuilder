@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: hn-crawler
+spec:
+  type: ClusterIP
+  selector:
+    app: hn-crawler
+  ports:
+    - port: 80
+      targetPort: 3000

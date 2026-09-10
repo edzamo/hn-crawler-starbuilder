@@ -1,35 +1,48 @@
 {
   "name": "hn-crawler-starbuilder",
   "version": "1.0.0",
-  "description": "Hacker News crawler with title-length based filtering and usage tracking",
-  "main": "dist/src/infrastructure/adapter/in/cli/cli.js",
+  "description": "Hacker News crawler REST API with title-length based filtering and usage tracking",
+  "main": "dist/src/main.js",
   "license": "MIT",
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "start": "node dist/src/infrastructure/adapter/in/cli/cli.js",
-    "dev": "ts-node src/infrastructure/adapter/in/cli/cli.ts",
-    "help": "node dist/src/infrastructure/adapter/in/cli/cli.js --help",
+    "start": "node dist/src/main.js",
+    "dev": "ts-node src/main.ts",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
     "lint": "eslint \"src/**/*.ts\" \"tests/**/*.ts\""
   },
   "dependencies": {
+    "@nestjs/common": "^11.2.3",
+    "@nestjs/config": "^4.0.4",
+    "@nestjs/core": "^11.2.3",
+    "@nestjs/platform-express": "^11.2.3",
     "axios": "^1.7.9",
     "better-sqlite3": "^11.8.1",
-    "cheerio": "^1.0.0"
+    "cheerio": "^1.0.0",
+    "class-transformer": "^0.5.1",
+    "class-validator": "^0.15.1",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.2"
   },
   "devDependencies": {
+    "@nestjs/testing": "^11.2.3",
     "@types/better-sqlite3": "^7.6.12",
     "@types/jest": "^29.5.14",
     "@types/node": "^22.10.5",
+    "@types/supertest": "^6.0.2",
     "@typescript-eslint/eslint-plugin": "^8.19.1",
     "@typescript-eslint/parser": "^8.19.1",
     "eslint": "^8.57.1",
     "jest": "^29.7.0",
+    "supertest": "^7.2.2",
     "ts-jest": "^29.2.5",
     "ts-node": "^10.9.2",
     "typescript": "^5.7.3"
+  },
+  "overrides": {
+    "multer": "^2.3.0"
   },
   "engines": {
     "node": ">=18"

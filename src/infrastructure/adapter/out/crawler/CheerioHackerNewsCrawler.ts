@@ -1,3 +1,4 @@
+import { Injectable } from '@nestjs/common';
 import axios from 'axios';
 import * as cheerio from 'cheerio';
 import type { Element } from 'domhandler';
@@ -16,7 +17,12 @@ const ENTRIES_PER_PAGE = 30;
  * title/link) immediately followed by a `tr` holding its subtext
  * (points, age, comment count) — that pairing is why they are parsed
  * together rather than with two independent selectors.
+ *
+ * Wired in infrastructure/config via useFactory (its constructor
+ * takes plain defaults, not injectable tokens), but still marked
+ * @Injectable() to document that it's a DI-managed adapter.
  */
+@Injectable()
 export class CheerioHackerNewsCrawler implements HackerNewsCrawlerPort {
   constructor(
     private readonly baseUrl: string = HN_BASE_URL,
