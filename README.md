@@ -56,24 +56,36 @@ only the pruned production `node_modules` and `dist/` — no compiler
 toolchain ships in the final image. `HEALTHCHECK` hits `GET /health`
 with a one-line Node script (no `curl` in the slim base image).
 
-## Kubernetes
+## Kubernetes (Helm)
 
-Basic manifests in `k8s/`: `ConfigMap` (env vars), `Deployment`
-(readiness/liveness probes on `/health`, resource requests/limits),
-`Service` (ClusterIP, port 80 → 3000).
+A single chart, `charts/hn-crawler`, cluster-agnostic (no hardcoded
+cloud storage class, no provider-specific annotations): `ConfigMap`
+(env vars), `Deployment` (readiness/liveness probes on `/health`,
+resource requests/limits), `Service` (ClusterIP by default), and an
+optional `PersistentVolumeClaim`.
 
 ```bash
-kubectl apply -f k8s/configmap.yaml -f k8s/deployment.yaml -f k8s/service.yaml
+helm lint charts/hn-crawler
+helm template my-hn-crawler charts/hn-crawler          # render manifests locally
+helm install my-hn-crawler charts/hn-crawler            # onto whatever cluster kubectl's context points at
+helm upgrade my-hn-crawler charts/hn-crawler --set image.tag=v1.2.3
+helm uninstall my-hn-crawler
 ```
 
-Replicas are pinned at 1: `usage.sqlite` is single-writer and lives on
-the Pod's own volume (`emptyDir` here — swap for a `PersistentVolumeClaim`
-to survive rescheduling to another node), so more replicas would mean
-separate, unmerged usage histories rather than one shared log. Scaling
-this past 1 would require moving usage tracking to a networked store
-first. `image:` points at the locally built `hn-crawler-starbuilder:local`
-tag — replace it with a registry path before applying outside a local
-cluster.
+Everything environment-specific is a value, not a hardcoded field —
+see `charts/hn-crawler/values.yaml`. Notably `image.repository`/`tag`
+(point at your registry, not the local `hn-crawler-starbuilder:local`
+build, before installing outside a local cluster) and
+`persistence.enabled` (`false` by default: `usage.sqlite` lives on an
+`emptyDir`, surviving Pod restarts but not rescheduling; set to `true`
+with your cluster's `storageClassName` — left empty by default so the
+cluster's own default StorageClass is used — to back it with a real
+PVC instead). `replicaCount` is pinned at 1 in the default values:
+`usage.sqlite` is single-writer on one Pod's volume, so more replicas
+would each track a separate, unmerged usage history rather than one
+shared log — `helm install` prints a warning via `NOTES.txt` if you
+override it above 1. Scaling past 1 would require moving usage
+tracking to a networked store first.
 
 ## Tests
 
@@ -200,8 +212,15 @@ tests/
   unit/
   e2e/
   fixtures/
-k8s/
-  configmap.yaml
-  deployment.yaml
-  service.yaml
+charts/
+  hn-crawler/
+    Chart.yaml
+    values.yaml
+    templates/
+      _helpers.tpl
+      configmap.yaml
+      deployment.yaml
+      service.yaml
+      pvc.yaml
+      NOTES.txt
 ```

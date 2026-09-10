@@ -1,0 +1,60 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "hn-crawler.fullname" . }}
+  labels:
+    {{- include "hn-crawler.labels" . | nindent 4 }}
+spec:
+  # usage.sqlite is single-writer and lives on one Pod's volume, so
+  # replicas beyond 1 would each track a separate, unmerged usage
+  # history rather than one shared log — this chart intentionally
+  # doesn't expose replicaCount as a "just scale it" knob without that
+  # caveat. Bump it only once usage tracking moves to a networked store.
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "hn-crawler.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "hn-crawler.selectorLabels" . | nindent 8 }}
+    spec:
+      containers:
+        - name: {{ .Chart.Name }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.service.targetPort }}
+          envFrom:
+            - configMapRef:
+                name: {{ include "hn-crawler.fullname" . }}
+          volumeMounts:
+            - name: usage-data
+              mountPath: /app/data
+          readinessProbe:
+            httpGet:
+              path: {{ .Values.probes.path }}
+              port: http
+            initialDelaySeconds: {{ .Values.probes.readiness.initialDelaySeconds }}
+            periodSeconds: {{ .Values.probes.readiness.periodSeconds }}
+          livenessProbe:
+            httpGet:
+              path: {{ .Values.probes.path }}
+              port: http
+            initialDelaySeconds: {{ .Values.probes.liveness.initialDelaySeconds }}
+            periodSeconds: {{ .Values.probes.liveness.periodSeconds }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+      {{- if .Values.persistence.enabled }}
+      volumes:
+        - name: usage-data
+          persistentVolumeClaim:
+            claimName: {{ include "hn-crawler.fullname" . }}
+      {{- else }}
+      volumes:
+        # No PVC requested (persistence.enabled=false): usage history
+        # survives Pod restarts but not rescheduling to another node.
+        - name: usage-data
+          emptyDir: {}
+      {{- end }}
