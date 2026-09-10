@@ -1,7 +1,7 @@
 import axios from 'axios';
 import * as cheerio from 'cheerio';
-import { HackerNewsEntry } from '../../domain/entities/HackerNewsEntry';
-import { HackerNewsCrawlerPort } from '../../domain/ports/HackerNewsCrawler.port';
+import { HackerNewsEntry } from '../../../../domain/model/HackerNewsEntry';
+import { HackerNewsCrawlerPort } from '../../../../application/out/HackerNewsCrawler.port';
 
 const HN_BASE_URL = 'https://news.ycombinator.com/';
 const ENTRIES_PER_PAGE = 30;

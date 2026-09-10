@@ -1,5 +1,5 @@
-import { HackerNewsEntry } from '../../domain/entities/HackerNewsEntry';
-import { countWords } from '../../domain/services/WordCounter';
+import { HackerNewsEntry } from '../model/HackerNewsEntry';
+import { countWords } from './WordCounter';
 
 const LONG_TITLE_THRESHOLD = 5;
 

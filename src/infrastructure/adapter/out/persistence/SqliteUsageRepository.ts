@@ -1,0 +1,56 @@
+import Database from 'better-sqlite3';
+import * as fs from 'fs';
+import * as path from 'path';
+import { UsageRecord, UsageRepositoryPort } from '../../../../application/out/UsageRepository.port';
+
+/**
+ * Persists usage records (one row per crawl/filter request) to a
+ * local SQLite file. SQLite was chosen over an external database so
+ * the exercise runs with zero setup — `npm start` just works — while
+ * still exercising real SQL and a schema instead of a flat log file.
+ */
+export class SqliteUsageRepository implements UsageRepositoryPort {
+  private readonly db: Database.Database;
+
+  constructor(dbPath: string = path.join(process.cwd(), 'data', 'usage.sqlite')) {
+    fs.mkdirSync(path.dirname(dbPath), { recursive: true });
+    this.db = new Database(dbPath);
+    this.db.pragma('journal_mode = WAL');
+    this.migrate();
+  }
+
+  private migrate(): void {
+    this.db.exec(`
+      CREATE TABLE IF NOT EXISTS usage_log (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        requested_at TEXT NOT NULL,
+        filter_applied TEXT NOT NULL,
+        entry_count INTEGER NOT NULL,
+        result_count INTEGER NOT NULL,
+        duration_ms INTEGER NOT NULL,
+        source TEXT NOT NULL
+      );
+    `);
+  }
+
+  async record(usage: UsageRecord): Promise<void> {
+    this.db
+      .prepare(
+        `INSERT INTO usage_log
+          (requested_at, filter_applied, entry_count, result_count, duration_ms, source)
+         VALUES (@requestedAt, @filterApplied, @entryCount, @resultCount, @durationMs, @source)`,
+      )
+      .run({
+        requestedAt: usage.requestedAt.toISOString(),
+        filterApplied: usage.filterApplied,
+        entryCount: usage.entryCount,
+        resultCount: usage.resultCount,
+        durationMs: usage.durationMs,
+        source: usage.source,
+      });
+  }
+
+  close(): void {
+    this.db.close();
+  }
+}
