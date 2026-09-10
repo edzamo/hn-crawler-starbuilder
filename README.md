@@ -45,27 +45,39 @@ orchestrating use case (including the crawler-failure path).
 
 ## Design decisions
 
-**Architecture.** The code is organized in three layers, loosely
-following ports & adapters:
+**Architecture.** The code follows hexagonal architecture (ports &
+adapters), with the direction of each port made explicit in the
+folder name rather than buried in a generic `ports/` bucket:
 
-- `src/domain` — pure business rules with no I/O: the `HackerNewsEntry`
-  shape, the `countWords` rule, and the two ports (`HackerNewsCrawlerPort`,
-  `UsageRepositoryPort`) that the application layer depends on as
-  interfaces rather than concrete implementations.
-- `src/application` — use cases: the two filters
-  (`filterLongTitlesByComments`, `filterShortTitlesByPoints`) as pure
-  functions, and `CrawlAndFilterUseCase`, which orchestrates a crawl,
-  applies a filter, and always records usage — including when the
-  crawl fails, so crawler errors show up in the usage data instead of
-  disappearing silently.
-- `src/infrastructure` — the concrete adapters: `CheerioHackerNewsCrawler`
+- `src/domain/model` — the `HackerNewsEntry` shape.
+  `src/domain/service` — pure business rules with no I/O: `countWords`
+  and the two filters (`filterLongTitlesByComments`,
+  `filterShortTitlesByPoints`).
+- `src/application/in` — the input port: the `CrawlAndFilterUseCase`
+  interface that any driving adapter (today's CLI, an HTTP controller
+  tomorrow) is allowed to call.
+  `src/application/out` — the output ports (`HackerNewsCrawlerPort`,
+  `UsageRepositoryPort`) the application needs from the outside world,
+  as interfaces.
+  `src/application/service` — `CrawlAndFilterService`, the only class
+  that implements the input port: it orchestrates `domain` and the
+  output ports to crawl, filter, and always record usage — including
+  when the crawl fails, so crawler errors show up in the usage data
+  instead of disappearing silently.
+- `src/infrastructure/adapter/in/cli` — the CLI, the driving adapter
+  that calls `application/in`.
+  `src/infrastructure/adapter/out/{crawler,persistence}` — the driven
+  adapters implementing `application/out`: `CheerioHackerNewsCrawler`
   (axios + cheerio) and `SqliteUsageRepository` (better-sqlite3).
 
-This separation is what makes the use case and filter tests run
-without any network or filesystem access — they're given fakes for
-the two ports — while the crawler and repository are still tested
-against something close to reality (a real captured HTML page, a real
-temp SQLite file).
+A request always flows one direction — `adapter/in` → `application/in`
+→ `application/service` → `application/out` → `adapter/out` — and
+never skips a layer (the CLI never imports an out-adapter directly,
+the service never imports an adapter). This is also what makes the
+service and filter tests run without any network or filesystem access
+— they're given fakes for the two output ports — while the crawler and
+repository are still tested against something close to reality (a
+real captured HTML page, a real temp SQLite file).
 
 **Word counting.** "Words" are whitespace-separated tokens that
 contain at least one letter or digit. A hyphenated compound like
@@ -115,17 +127,19 @@ scraper that runs once per invocation.
 ```
 src/
   domain/
-    entities/HackerNewsEntry.ts
-    services/WordCounter.ts
-    ports/HackerNewsCrawler.port.ts
-    ports/UsageRepository.port.ts
+    model/HackerNewsEntry.ts
+    service/WordCounter.ts
+    service/FilterEntries.service.ts
   application/
-    use-cases/FilterEntries.usecase.ts
-    use-cases/CrawlAndFilter.usecase.ts
+    in/CrawlAndFilter.in.ts
+    out/HackerNewsCrawler.port.ts
+    out/UsageRepository.port.ts
+    service/CrawlAndFilterService.ts
   infrastructure/
-    crawler/CheerioHackerNewsCrawler.ts
-    persistence/SqliteUsageRepository.ts
-  cli.ts
+    adapter/
+      in/cli/cli.ts
+      out/crawler/CheerioHackerNewsCrawler.ts
+      out/persistence/SqliteUsageRepository.ts
 tests/
   unit/
   fixtures/

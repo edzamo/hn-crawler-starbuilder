@@ -1,10 +1,11 @@
 #!/usr/bin/env node
-import { CrawlAndFilterUseCase } from './application/use-cases/CrawlAndFilter.usecase';
-import { HackerNewsEntry } from './domain/entities/HackerNewsEntry';
-import { countWords } from './domain/services/WordCounter';
-import { FilterApplied } from './domain/ports/UsageRepository.port';
-import { CheerioHackerNewsCrawler } from './infrastructure/crawler/CheerioHackerNewsCrawler';
-import { SqliteUsageRepository } from './infrastructure/persistence/SqliteUsageRepository';
+import { CrawlAndFilterUseCase } from '../../../../application/in/CrawlAndFilter.in';
+import { CrawlAndFilterService } from '../../../../application/service/CrawlAndFilterService';
+import { HackerNewsEntry } from '../../../../domain/model/HackerNewsEntry';
+import { countWords } from '../../../../domain/service/WordCounter';
+import { FilterApplied } from '../../../../application/out/UsageRepository.port';
+import { CheerioHackerNewsCrawler } from '../../out/crawler/CheerioHackerNewsCrawler';
+import { SqliteUsageRepository } from '../../out/persistence/SqliteUsageRepository';
 
 const TOP_ENTRIES_COUNT = 30;
 
@@ -35,7 +36,10 @@ function printEntries(entries: HackerNewsEntry[]): void {
 async function main(): Promise<void> {
   const filter = parseFilter(process.argv.slice(2));
   const usageRepository = new SqliteUsageRepository();
-  const useCase = new CrawlAndFilterUseCase(new CheerioHackerNewsCrawler(), usageRepository);
+  const useCase: CrawlAndFilterUseCase = new CrawlAndFilterService(
+    new CheerioHackerNewsCrawler(),
+    usageRepository,
+  );
 
   try {
     const { entries, filterApplied } = await useCase.execute({

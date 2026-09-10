@@ -1,4 +1,4 @@
-import { countWords } from '../../src/domain/services/WordCounter';
+import { countWords } from '../../src/domain/service/WordCounter';
 
 describe('countWords', () => {
   it('counts the example from the spec as 5 words', () => {

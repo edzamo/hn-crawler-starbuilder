@@ -1,7 +1,7 @@
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
-import { SqliteUsageRepository } from '../../src/infrastructure/persistence/SqliteUsageRepository';
+import { SqliteUsageRepository } from '../../src/infrastructure/adapter/out/persistence/SqliteUsageRepository';
 import Database from 'better-sqlite3';
 
 describe('SqliteUsageRepository', () => {

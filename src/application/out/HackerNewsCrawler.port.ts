@@ -1,4 +1,4 @@
-import { HackerNewsEntry } from '../entities/HackerNewsEntry';
+import { HackerNewsEntry } from '../../domain/model/HackerNewsEntry';
 
 export interface HackerNewsCrawlerPort {
   /**

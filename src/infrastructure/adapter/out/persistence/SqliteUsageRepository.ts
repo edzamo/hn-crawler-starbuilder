@@ -1,7 +1,7 @@
 import Database from 'better-sqlite3';
 import * as fs from 'fs';
 import * as path from 'path';
-import { UsageRecord, UsageRepositoryPort } from '../../domain/ports/UsageRepository.port';
+import { UsageRecord, UsageRepositoryPort } from '../../../../application/out/UsageRepository.port';
 
 /**
  * Persists usage records (one row per crawl/filter request) to a

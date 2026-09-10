@@ -1,8 +1,8 @@
-import { HackerNewsEntry } from '../../src/domain/entities/HackerNewsEntry';
+import { HackerNewsEntry } from '../../src/domain/model/HackerNewsEntry';
 import {
   filterLongTitlesByComments,
   filterShortTitlesByPoints,
-} from '../../src/application/use-cases/FilterEntries.usecase';
+} from '../../src/domain/service/FilterEntries.service';
 
 function entry(overrides: Partial<HackerNewsEntry>): HackerNewsEntry {
   return {

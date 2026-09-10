@@ -1,26 +1,16 @@
-import { HackerNewsEntry } from '../../domain/entities/HackerNewsEntry';
-import { HackerNewsCrawlerPort } from '../../domain/ports/HackerNewsCrawler.port';
-import { FilterApplied, UsageRepositoryPort } from '../../domain/ports/UsageRepository.port';
-import { filterLongTitlesByComments, filterShortTitlesByPoints } from './FilterEntries.usecase';
-
-export interface CrawlAndFilterRequest {
-  entryCount: number;
-  filter: FilterApplied;
-  source: 'cli' | 'api';
-}
-
-export interface CrawlAndFilterResult {
-  entries: HackerNewsEntry[];
-  filterApplied: FilterApplied;
-}
+import { HackerNewsEntry } from '../../domain/model/HackerNewsEntry';
+import { filterLongTitlesByComments, filterShortTitlesByPoints } from '../../domain/service/FilterEntries.service';
+import { CrawlAndFilterRequest, CrawlAndFilterResult, CrawlAndFilterUseCase } from '../in/CrawlAndFilter.in';
+import { HackerNewsCrawlerPort } from '../out/HackerNewsCrawler.port';
+import { FilterApplied, UsageRepositoryPort } from '../out/UsageRepository.port';
 
 /**
- * Orchestrates a single "user interaction": crawl the top N entries,
- * apply the requested filter, and log the interaction (timestamp,
- * filter used, and enough context to analyze crawler behavior later)
- * regardless of whether the crawl succeeds or fails.
+ * Implements the CrawlAndFilter input port: crawls the top N entries,
+ * applies the requested filter, and always logs the interaction
+ * (timestamp, filter used, and enough context to analyze crawler
+ * behavior later) regardless of whether the crawl succeeds or fails.
  */
-export class CrawlAndFilterUseCase {
+export class CrawlAndFilterService implements CrawlAndFilterUseCase {
   constructor(
     private readonly crawler: HackerNewsCrawlerPort,
     private readonly usageRepository: UsageRepositoryPort,

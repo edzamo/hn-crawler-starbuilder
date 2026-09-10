@@ -1,6 +1,6 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import { CheerioHackerNewsCrawler } from '../../src/infrastructure/crawler/CheerioHackerNewsCrawler';
+import { CheerioHackerNewsCrawler } from '../../src/infrastructure/adapter/out/crawler/CheerioHackerNewsCrawler';
 
 const fixtureHtml = fs.readFileSync(
   path.join(__dirname, '../fixtures/hn-front-page.html'),
