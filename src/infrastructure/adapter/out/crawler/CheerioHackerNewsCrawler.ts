@@ -1,5 +1,6 @@
 import axios from 'axios';
 import * as cheerio from 'cheerio';
+import type { Element } from 'domhandler';
 import { HackerNewsEntry } from '../../../../domain/model/HackerNewsEntry';
 import { HackerNewsCrawlerPort } from '../../../../application/out/HackerNewsCrawler.port';
 
@@ -50,24 +51,27 @@ export class CheerioHackerNewsCrawler implements HackerNewsCrawlerPort {
 
   private parseEntries(html: string): HackerNewsEntry[] {
     const $ = cheerio.load(html);
-    const entries: HackerNewsEntry[] = [];
 
-    $('tr.athing').each((_, storyRow) => {
-      const $story = $(storyRow);
+    return $('tr.athing')
+      .toArray()
+      .map((storyRow) => this.parseEntry($, storyRow))
+      .filter((entry): entry is HackerNewsEntry => entry !== null);
+  }
 
-      const rank = this.parseRank($story.find('.rank').text());
-      const title = $story.find('.titleline > a').first().text().trim();
+  private parseEntry($: cheerio.CheerioAPI, storyRow: Element): HackerNewsEntry | null {
+    const $story = $(storyRow);
 
-      const $subtext = $story.next('tr').find('.subtext');
-      const points = this.parseLeadingInt($subtext.find('.score').text());
-      const commentCount = this.parseCommentCount($subtext.find('a').last().text());
+    const rank = this.parseRank($story.find('.rank').text());
+    const title = $story.find('.titleline > a').first().text().trim();
+    if (!title) {
+      return null;
+    }
 
-      if (title) {
-        entries.push({ rank, title, points, commentCount });
-      }
-    });
+    const $subtext = $story.next('tr').find('.subtext');
+    const points = this.parseLeadingInt($subtext.find('.score').text());
+    const commentCount = this.parseCommentCount($subtext.find('a').last().text());
 
-    return entries;
+    return { rank, title, points, commentCount };
   }
 
   private parseRank(rawRank: string): number {
