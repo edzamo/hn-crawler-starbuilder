@@ -1,0 +1,13 @@
+services:
+  crawler:
+    build: .
+    image: hn-crawler-starbuilder:local
+    volumes:
+      # Persist usage.sqlite across `docker compose run` invocations.
+      - hn-crawler-data:/app/data
+    # No filter by default; override per-run, e.g.:
+    #   docker compose run --rm crawler --filter=long-titles
+    command: []
+
+volumes:
+  hn-crawler-data:

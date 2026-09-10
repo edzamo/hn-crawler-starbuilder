@@ -14,9 +14,35 @@ const FILTER_FLAGS: Record<string, FilterApplied> = {
   '--filter=short-titles': 'short-titles',
 };
 
+const HELP_TEXT = `hn-crawler-starbuilder
+
+Crawls the top 30 Hacker News front-page entries and optionally
+filters them by title length.
+
+Usage:
+  npm start -- [options]
+
+Options:
+  --filter=long-titles   Titles with more than 5 words, sorted by comment count (desc)
+  --filter=short-titles  Titles with 5 words or fewer, sorted by points (desc)
+  -h, --help             Show this help message
+
+Examples:
+  npm start
+  npm start -- --filter=long-titles
+  npm start -- --filter=short-titles
+
+Every run logs a usage row (timestamp, filter applied, result count)
+to data/usage.sqlite.
+`;
+
 function parseFilter(args: string[]): FilterApplied {
   const flag = args.find((arg) => arg in FILTER_FLAGS);
   return flag ? FILTER_FLAGS[flag] : 'none';
+}
+
+function wantsHelp(args: string[]): boolean {
+  return args.some((arg) => arg === '--help' || arg === '-h');
 }
 
 function printEntries(entries: HackerNewsEntry[]): void {
@@ -34,7 +60,14 @@ function printEntries(entries: HackerNewsEntry[]): void {
 }
 
 async function main(): Promise<void> {
-  const filter = parseFilter(process.argv.slice(2));
+  const args = process.argv.slice(2);
+
+  if (wantsHelp(args)) {
+    console.log(HELP_TEXT);
+    return;
+  }
+
+  const filter = parseFilter(args);
   const usageRepository = new SqliteUsageRepository();
   const useCase: CrawlAndFilterUseCase = new CrawlAndFilterService(
     new CheerioHackerNewsCrawler(),
