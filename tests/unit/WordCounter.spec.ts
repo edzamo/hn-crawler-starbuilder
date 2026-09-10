@@ -18,7 +18,7 @@ describe('countWords', () => {
   });
 
   it('collapses repeated whitespace', () => {
-    expect(countWords('Too   many    spaces here')).toBe(3);
+    expect(countWords('Too   many    spaces here')).toBe(4);
   });
 
   it('returns 0 for an empty or whitespace-only title', () => {
