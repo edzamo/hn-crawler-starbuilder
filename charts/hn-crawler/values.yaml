@@ -47,3 +47,18 @@ persistence:
   # chart portable across providers.
   storageClassName: ""
   accessMode: ReadWriteOnce
+
+# Off by default: see the single-writer SQLite caveat above. Safe to
+# enable only when persistence.enabled=false (each replica gets its
+# own emptyDir and its own, siloed usage log) — enabling both at once
+# means every replica fighting over the same PVC file. NOTES.txt warns
+# on install if you combine them.
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 3
+  targetMemoryUtilizationPercentage: 80
+
+pdb:
+  enabled: false
+  minAvailable: 1

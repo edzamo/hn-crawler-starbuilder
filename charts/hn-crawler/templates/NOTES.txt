@@ -22,3 +22,11 @@ is single-writer and lives on each Pod's own volume — each replica
 will track a separate, unmerged usage history. Keep replicaCount at 1
 unless usage tracking has been moved to a networked store.
 {{- end }}
+{{- if and .Values.autoscaling.enabled .Values.persistence.enabled }}
+
+WARNING: autoscaling.enabled and persistence.enabled are both true.
+Every replica would mount the same PersistentVolumeClaim and write to
+the same usage.sqlite file concurrently — enable autoscaling only with
+persistence.enabled=false (each replica then gets its own, siloed
+emptyDir log) until usage tracking moves off SQLite.
+{{- end }}
