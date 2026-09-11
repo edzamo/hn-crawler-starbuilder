@@ -8,6 +8,7 @@
     "build": "tsc -p tsconfig.json",
     "start": "node dist/src/infrastructure/adapter/in/cli/cli.js",
     "dev": "ts-node src/infrastructure/adapter/in/cli/cli.ts",
+    "help": "node dist/src/infrastructure/adapter/in/cli/cli.js --help",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",

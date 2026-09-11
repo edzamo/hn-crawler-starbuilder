@@ -25,12 +25,31 @@ npm start -- --filter=short-titles  # <=5-word titles, ordered by points desc
 
 # or run directly against source with ts-node
 npm run dev -- --filter=long-titles
+
+# usage
+npm run help
 ```
 
 Each run prints the applied filter, the result count, and one line
 per entry (`rank`, `points`, `comment count`, `word count`, `title`).
 A `data/usage.sqlite` file is created (gitignored) recording one row
 per request.
+
+## Docker
+
+```bash
+docker compose build
+docker compose run --rm crawler                        # top 30, no filter
+docker compose run --rm crawler --filter=long-titles
+docker compose run --rm crawler --help
+```
+
+`usage.sqlite` is written to a named volume (`hn-crawler-data`) so
+usage history survives across runs. The image is a two-stage build:
+the builder stage compiles TypeScript and better-sqlite3's native
+addon (needs `python3`/`make`/`g++`), the runtime stage copies only
+the compiled output and pruned production `node_modules` — no
+compiler toolchain ships in the final image.
 
 ## Tests
 
