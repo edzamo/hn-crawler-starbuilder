@@ -97,6 +97,28 @@ against fake ports, no real network or filesystem access.
 
 ## Design decisions
 
+**Approach.** The two domain rules in the exercise were treated as
+something to reverse-engineer against real evidence, not just
+implement from a paraphrase:
+
+- The word-counting rule was derived backward from the exercise's own
+  worked example rather than guessed: `"This is - a self-explained
+  example"` must count as 5. Splitting on whitespace and testing each
+  token for at least one letter/digit reproduces that count exactly —
+  the standalone `-` has no alphanumeric character and drops out,
+  while `self-explained` has no internal space and survives as one
+  token. That rule is unit-tested against the exact example string
+  plus edge cases (repeated spaces, an all-symbol token, an empty
+  title) before it was trusted anywhere else.
+- The crawler's HTML selectors were derived from inspecting HN's
+  actual front page (view-source, not a guess at "how a table
+  probably looks"): each story's rank/title/link and its
+  points/comment-count live in two separate `<tr>` elements with no
+  shared parent, which is only visible by reading the real markup.
+  That inspection is what the fixture in `tests/fixtures/` captures,
+  so the parsing logic is tested against real HTML, not an idealized
+  mock of it.
+
 **Architecture.** The code follows hexagonal architecture (ports &
 adapters) on top of NestJS, with the direction of each port made
 explicit in the folder name rather than buried in a generic `ports/`
