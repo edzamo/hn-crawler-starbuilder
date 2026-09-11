@@ -7,3 +7,5 @@ export interface HackerNewsCrawlerPort {
    */
   fetchTopEntries(count: number): Promise<HackerNewsEntry[]>;
 }
+
+export const HACKER_NEWS_CRAWLER_PORT = Symbol('HackerNewsCrawlerPort');

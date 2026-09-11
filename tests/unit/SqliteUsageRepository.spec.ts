@@ -24,7 +24,7 @@ describe('SqliteUsageRepository', () => {
       entryCount: 30,
       resultCount: 12,
       durationMs: 450,
-      source: 'cli',
+      source: 'api',
     });
     repository.close();
 
@@ -38,7 +38,7 @@ describe('SqliteUsageRepository', () => {
       entry_count: 30,
       result_count: 12,
       duration_ms: 450,
-      source: 'cli',
+      source: 'api',
     });
   });
 
@@ -51,7 +51,7 @@ describe('SqliteUsageRepository', () => {
       entryCount: 30,
       resultCount: 18,
       durationMs: 100,
-      source: 'cli',
+      source: 'api',
     });
     await repository.record({
       requestedAt: new Date(),

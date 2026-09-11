@@ -1,3 +1,4 @@
+import { Injectable, OnModuleDestroy } from '@nestjs/common';
 import Database from 'better-sqlite3';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -6,10 +7,15 @@ import { UsageRecord, UsageRepositoryPort } from '../../../../application/out/Us
 /**
  * Persists usage records (one row per crawl/filter request) to a
  * local SQLite file. SQLite was chosen over an external database so
- * the exercise runs with zero setup — `npm start` just works — while
- * still exercising real SQL and a schema instead of a flat log file.
+ * the exercise runs with zero setup while still exercising real SQL
+ * and a schema instead of a flat log file.
+ *
+ * Implements OnModuleDestroy so Nest closes the DB handle on
+ * shutdown regardless of how this instance was constructed (it's
+ * bound via useFactory in infrastructure/config, not useClass).
  */
-export class SqliteUsageRepository implements UsageRepositoryPort {
+@Injectable()
+export class SqliteUsageRepository implements UsageRepositoryPort, OnModuleDestroy {
   private readonly db: Database.Database;
 
   constructor(dbPath: string = path.join(process.cwd(), 'data', 'usage.sqlite')) {
@@ -48,6 +54,10 @@ export class SqliteUsageRepository implements UsageRepositoryPort {
         durationMs: usage.durationMs,
         source: usage.source,
       });
+  }
+
+  onModuleDestroy(): void {
+    this.close();
   }
 
   close(): void {

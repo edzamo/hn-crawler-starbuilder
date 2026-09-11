@@ -22,6 +22,8 @@ FROM node:20-slim AS runtime
 
 WORKDIR /app
 ENV NODE_ENV=production
+ENV PORT=3000
+EXPOSE 3000
 
 COPY package.json package-lock.json ./
 COPY --from=builder /app/node_modules ./node_modules
@@ -31,5 +33,9 @@ COPY --from=builder /app/dist ./dist
 # so history survives across container restarts.
 VOLUME ["/app/data"]
 
-ENTRYPOINT ["node", "dist/src/infrastructure/adapter/in/cli/cli.js"]
-CMD []
+# No curl/wget in node:20-slim — a one-liner Node http request avoids
+# adding a package just for the healthcheck.
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s \
+  CMD node -e "require('http').get('http://localhost:'+(process.env.PORT||3000)+'/health', r => process.exit(r.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"
+
+CMD ["node", "dist/src/main.js"]
