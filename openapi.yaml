@@ -1,0 +1,115 @@
+# Generated from the running app: `curl http://localhost:3000/api-docs-json`,
+# converted to YAML. Also served live at /api-docs (Swagger UI) and
+# /api-docs-json. Consumed by the OWASP ZAP API scan in CI as the scan
+# target definition.
+#
+# This was authored code-first (the controllers/DTOs came first, this
+# file was exported from them), not contract-first as the team's
+# openapi-first-designer convention prescribes for a new API — noted
+# here rather than pretended otherwise. From this point on, treat this
+# file as the versioned source of truth: a future controller/DTO
+# change that isn't reflected here (or vice versa) is drift, and
+# should be caught the way openapi-first-designer's drift-check
+# describes, not just re-exported over.
+openapi: 3.0.0
+paths:
+  /entries:
+    get:
+      operationId: EntriesController_getEntries
+      parameters:
+      - name: filter
+        required: false
+        in: query
+        description: 'long-titles: >5-word titles sorted by comments desc. short-titles:
+          <=5-word titles sorted by points desc. Omit for no filter.'
+        schema:
+          type: string
+          enum:
+          - long-titles
+          - short-titles
+          - none
+      responses:
+        '200':
+          description: filterApplied, a result count, and the entry list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetEntriesResponseDto'
+        '400':
+          description: filter is not one of long-titles, short-titles, none
+      summary: Crawl the top 30 HN entries, optionally filtered by title length
+      tags:
+      - entries
+  /health:
+    get:
+      operationId: HealthController_check
+      parameters: []
+      responses:
+        '200':
+          description: the process is up
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponseDto'
+      summary: Liveness/readiness probe target
+      tags:
+      - health
+info:
+  title: HN Crawler
+  description: Hacker News crawler with title-length filtering and usage tracking
+  version: '1.0'
+  contact: {}
+tags: []
+servers: []
+components:
+  schemas:
+    HackerNewsEntryDto:
+      type: object
+      properties:
+        rank:
+          type: number
+          example: 1
+          description: Position on the HN front page
+        title:
+          type: string
+          example: 'Show HN: a small crawler'
+        points:
+          type: number
+          example: 120
+        commentCount:
+          type: number
+          example: 45
+      required:
+      - rank
+      - title
+      - points
+      - commentCount
+    GetEntriesResponseDto:
+      type: object
+      properties:
+        filterApplied:
+          type: string
+          enum:
+          - long-titles
+          - short-titles
+          - none
+        count:
+          type: number
+          example: 20
+          description: entries.length, after filtering
+        entries:
+          type: array
+          items:
+            $ref: '#/components/schemas/HackerNewsEntryDto'
+      required:
+      - filterApplied
+      - count
+      - entries
+    HealthResponseDto:
+      type: object
+      properties:
+        status:
+          type: string
+          example: ok
+      required:
+      - status
