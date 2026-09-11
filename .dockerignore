@@ -1,0 +1,10 @@
+node_modules
+dist
+coverage
+data
+*.sqlite
+*.sqlite3
+.git
+.claude
+CLAUDE.md
+tests

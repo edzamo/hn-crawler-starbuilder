@@ -1,0 +1,50 @@
+# Config values for the test/QA environment.
+# See dev.yml for the note on why this doesn't ship its own Chart.yaml.
+
+image:
+  repository: hn-crawler-starbuilder
+  tag: test
+  pullPolicy: IfNotPresent
+
+replicaCount: 1
+
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 3000
+
+env:
+  PORT: "3000"
+  USAGE_DB_PATH: /app/data/usage.sqlite
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 500m
+    memory: 256Mi
+
+probes:
+  path: /health
+  readiness:
+    initialDelaySeconds: 5
+    periodSeconds: 10
+  liveness:
+    initialDelaySeconds: 10
+    periodSeconds: 20
+
+# Persistence turns on here first (not straight in prod) so the PVC
+# path gets exercised before it matters. Still 1 replica: usage.sqlite
+# is single-writer, and autoscaling+persistence together would mean
+# every replica fighting over the same PVC file.
+persistence:
+  enabled: true
+  size: 256Mi
+  storageClassName: ""
+
+autoscaling:
+  enabled: false
+
+pdb:
+  enabled: false
