@@ -1,0 +1,58 @@
+# Config values for prod.
+# See dev.yml for the note on why this doesn't ship its own Chart.yaml.
+
+image:
+  repository: hn-crawler-starbuilder
+  tag: prod
+  pullPolicy: IfNotPresent
+
+# replicaCount and autoscaling.enabled are deliberately NOT bumped
+# here. usage.sqlite is single-writer on a PVC that is itself
+# ReadWriteOnce — more than 1 replica would mean concurrent writers to
+# one file, or Pods that can't even schedule together depending on the
+# storage backend. Real horizontal scaling would require moving usage
+# tracking off SQLite first; until then, prod availability comes from
+# the PodDisruptionBudget + probes + resource headroom below, not
+# extra replicas.
+replicaCount: 1
+
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 3000
+
+env:
+  PORT: "3000"
+  USAGE_DB_PATH: /app/data/usage.sqlite
+
+resources:
+  requests:
+    cpu: 200m
+    memory: 192Mi
+  limits:
+    cpu: 750m
+    memory: 384Mi
+
+probes:
+  path: /health
+  readiness:
+    initialDelaySeconds: 5
+    periodSeconds: 10
+  liveness:
+    initialDelaySeconds: 10
+    periodSeconds: 20
+
+persistence:
+  enabled: true
+  size: 1Gi
+  # Set to your cluster's StorageClass (e.g. a replicated one) instead
+  # of leaving it blank — left blank here since this file doesn't
+  # assume a specific cloud provider.
+  storageClassName: ""
+
+autoscaling:
+  enabled: false
+
+pdb:
+  enabled: true
+  minAvailable: 1

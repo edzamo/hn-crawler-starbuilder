@@ -1,6 +1,0 @@
-apiVersion: v2
-name: hn-crawler
-description: Hacker News crawler REST API — top-30 entries with title-length filtering and usage tracking
-type: application
-version: 0.1.0
-appVersion: "1.0.0"
