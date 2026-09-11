@@ -1,5 +1,6 @@
 import * as fs from 'fs';
 import * as path from 'path';
+import type axios from 'axios';
 import { CheerioHackerNewsCrawler } from '../../src/infrastructure/adapter/out/crawler/CheerioHackerNewsCrawler';
 
 const fixtureHtml = fs.readFileSync(
@@ -7,7 +8,9 @@ const fixtureHtml = fs.readFileSync(
   'utf8',
 );
 
-function fakeHttpClient(html: string) {
+type HttpClient = Pick<typeof axios, 'get'>;
+
+function fakeHttpClient(html: string): HttpClient {
   return {
     get: jest.fn().mockResolvedValue({ data: html }),
   };
@@ -16,7 +19,7 @@ function fakeHttpClient(html: string) {
 describe('CheerioHackerNewsCrawler', () => {
   it('parses rank, title, points and comment count from the front page', async () => {
     const httpClient = fakeHttpClient(fixtureHtml);
-    const crawler = new CheerioHackerNewsCrawler('https://news.ycombinator.com/', httpClient as any);
+    const crawler = new CheerioHackerNewsCrawler('https://news.ycombinator.com/', httpClient);
 
     const entries = await crawler.fetchTopEntries(30);
 
@@ -36,7 +39,7 @@ describe('CheerioHackerNewsCrawler', () => {
 
   it('preserves the site ranking order', async () => {
     const httpClient = fakeHttpClient(fixtureHtml);
-    const crawler = new CheerioHackerNewsCrawler('https://news.ycombinator.com/', httpClient as any);
+    const crawler = new CheerioHackerNewsCrawler('https://news.ycombinator.com/', httpClient);
 
     const entries = await crawler.fetchTopEntries(30);
 
@@ -47,7 +50,7 @@ describe('CheerioHackerNewsCrawler', () => {
 
   it('requests a second page only when more than 30 entries are needed', async () => {
     const httpClient = fakeHttpClient(fixtureHtml);
-    const crawler = new CheerioHackerNewsCrawler('https://news.ycombinator.com/', httpClient as any);
+    const crawler = new CheerioHackerNewsCrawler('https://news.ycombinator.com/', httpClient);
 
     await crawler.fetchTopEntries(10);
 
@@ -63,7 +66,7 @@ describe('CheerioHackerNewsCrawler', () => {
       </tbody></table>
     `;
     const httpClient = fakeHttpClient(html);
-    const crawler = new CheerioHackerNewsCrawler('https://news.ycombinator.com/', httpClient as any);
+    const crawler = new CheerioHackerNewsCrawler('https://news.ycombinator.com/', httpClient);
 
     const [entry] = await crawler.fetchTopEntries(1);
 

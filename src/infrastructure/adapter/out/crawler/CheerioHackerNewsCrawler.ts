@@ -8,6 +8,8 @@ import { HackerNewsCrawlerPort } from '../../../../application/out/HackerNewsCra
 const HN_BASE_URL = 'https://news.ycombinator.com/';
 const ENTRIES_PER_PAGE = 30;
 
+type HttpClient = Pick<typeof axios, 'get'>;
+
 /**
  * Scrapes the Hacker News front page(s) with cheerio.
  *
@@ -26,7 +28,7 @@ const ENTRIES_PER_PAGE = 30;
 export class CheerioHackerNewsCrawler implements HackerNewsCrawlerPort {
   constructor(
     private readonly baseUrl: string = HN_BASE_URL,
-    private readonly httpClient = axios,
+    private readonly httpClient: HttpClient = axios,
   ) {}
 
   async fetchTopEntries(count: number): Promise<HackerNewsEntry[]> {
