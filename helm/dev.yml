@@ -1,0 +1,56 @@
+# Config values for the dev environment.
+#
+# NOTE: unlike a self-contained Helm chart, this file has nothing that
+# consumes it yet — no Chart.yaml/templates live in this repo. The
+# pattern mirrors how our internal pipelines work at other shops
+# (Pichincha's helm/{dev,test,prod}.yml): each service repo carries
+# only its own per-environment values, and a shared chart maintained
+# centrally (referenced from the CI/CD pipeline) does the actual
+# templating. That shared chart doesn't exist for this exercise, so
+# treat this file as the documented, versioned intent for what the
+# deployment should look like per environment — `docker compose` is
+# what's actually runnable today (see README's Docker section).
+
+image:
+  repository: hn-crawler-starbuilder
+  tag: dev
+  pullPolicy: IfNotPresent
+
+replicaCount: 1
+
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 3000
+
+env:
+  PORT: "3000"
+  USAGE_DB_PATH: /app/data/usage.sqlite
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 96Mi
+  limits:
+    cpu: 250m
+    memory: 192Mi
+
+probes:
+  path: /health
+  readiness:
+    initialDelaySeconds: 5
+    periodSeconds: 10
+  liveness:
+    initialDelaySeconds: 10
+    periodSeconds: 20
+
+# Cheapest possible footprint: ephemeral storage, no autoscaling, no
+# PodDisruptionBudget (a single dev replica going down briefly is fine).
+persistence:
+  enabled: false
+
+autoscaling:
+  enabled: false
+
+pdb:
+  enabled: false

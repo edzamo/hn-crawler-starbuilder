@@ -56,36 +56,30 @@ only the pruned production `node_modules` and `dist/` — no compiler
 toolchain ships in the final image. `HEALTHCHECK` hits `GET /health`
 with a one-line Node script (no `curl` in the slim base image).
 
-## Kubernetes (Helm)
+## Kubernetes (Helm values)
 
-A single chart, `charts/hn-crawler`, cluster-agnostic (no hardcoded
-cloud storage class, no provider-specific annotations): `ConfigMap`
-(env vars), `Deployment` (readiness/liveness probes on `/health`,
-resource requests/limits), `Service` (ClusterIP by default), and an
-optional `PersistentVolumeClaim`.
+`helm/` holds exactly three files: `dev.yml`, `test.yml`, `prod.yml`.
+No `Chart.yaml`, no `templates/` — this repo doesn't own a Helm chart.
+That mirrors how some teams' internal pipelines are set up: each
+service repo carries only its per-environment values, and a chart
+maintained centrally (referenced by the CI/CD pipeline) does the
+actual templating. That shared chart doesn't exist for this exercise,
+so treat these three files as the documented, versioned intent for
+what the deployment should look like per environment (image tag,
+resources, whether persistence/autoscaling/a PodDisruptionBudget are
+on) — `docker compose` (above) is what's actually runnable today.
 
-```bash
-helm lint charts/hn-crawler
-helm template my-hn-crawler charts/hn-crawler          # render manifests locally
-helm install my-hn-crawler charts/hn-crawler            # onto whatever cluster kubectl's context points at
-helm upgrade my-hn-crawler charts/hn-crawler --set image.tag=v1.2.3
-helm uninstall my-hn-crawler
-```
-
-Everything environment-specific is a value, not a hardcoded field —
-see `charts/hn-crawler/values.yaml`. Notably `image.repository`/`tag`
-(point at your registry, not the local `hn-crawler-starbuilder:local`
-build, before installing outside a local cluster) and
-`persistence.enabled` (`false` by default: `usage.sqlite` lives on an
-`emptyDir`, surviving Pod restarts but not rescheduling; set to `true`
-with your cluster's `storageClassName` — left empty by default so the
-cluster's own default StorageClass is used — to back it with a real
-PVC instead). `replicaCount` is pinned at 1 in the default values:
-`usage.sqlite` is single-writer on one Pod's volume, so more replicas
-would each track a separate, unmerged usage history rather than one
-shared log — `helm install` prints a warning via `NOTES.txt` if you
-override it above 1. Scaling past 1 would require moving usage
-tracking to a networked store first.
+Each file is self-contained (no shared defaults file layered under
+them) and covers: `image.repository`/`tag`, `service` (type/port),
+`resources`, `probes` (against `/health`), `persistence` (`false` in
+dev — `usage.sqlite` on an ephemeral volume; `true` from test onward,
+with `storageClassName` left blank so a real chart's default
+StorageClass would apply), and `replicaCount`/`autoscaling`/`pdb`.
+`replicaCount` stays at 1 everywhere and `autoscaling.enabled` stays
+`false`: `usage.sqlite` is single-writer, so real horizontal scaling
+would need usage tracking moved off SQLite first — that tradeoff is
+documented inline in `prod.yml` rather than quietly turning a knob
+that wouldn't actually be safe.
 
 ## Tests
 
@@ -212,15 +206,8 @@ tests/
   unit/
   e2e/
   fixtures/
-charts/
-  hn-crawler/
-    Chart.yaml
-    values.yaml
-    templates/
-      _helpers.tpl
-      configmap.yaml
-      deployment.yaml
-      service.yaml
-      pvc.yaml
-      NOTES.txt
+helm/
+  dev.yml
+  test.yml
+  prod.yml
 ```
