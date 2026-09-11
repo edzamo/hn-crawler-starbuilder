@@ -28,8 +28,16 @@ describe('SqliteUsageRepository', () => {
     });
     repository.close();
 
+    type UsageLogRow = {
+      filter_applied: string;
+      entry_count: number;
+      result_count: number;
+      duration_ms: number;
+      source: string;
+    };
+
     const db = new Database(dbPath, { readonly: true });
-    const rows = db.prepare('SELECT * FROM usage_log').all() as any[];
+    const rows = db.prepare('SELECT * FROM usage_log').all() as UsageLogRow[];
     db.close();
 
     expect(rows).toHaveLength(1);
