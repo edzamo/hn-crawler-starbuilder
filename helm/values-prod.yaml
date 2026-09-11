@@ -1,6 +1,6 @@
 # Overrides for prod — applied on top of values.yaml:
-#   helm upgrade --install hn-crawler charts/hn-crawler \
-#     -f charts/hn-crawler/values-prod.yaml --set image.tag=<release-tag>
+#   helm upgrade --install hn-crawler helm \
+#     -f helm/values-prod.yaml --set image.tag=<release-tag>
 #
 # replicaCount and autoscaling.enabled are deliberately NOT bumped
 # here. usage.sqlite is single-writer on a PVC that is itself

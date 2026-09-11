@@ -1,6 +1,6 @@
 # Overrides for the dev environment — applied on top of values.yaml:
-#   helm upgrade --install hn-crawler-dev charts/hn-crawler \
-#     -f charts/hn-crawler/values-dev.yaml --set image.tag=<sha>
+#   helm upgrade --install hn-crawler-dev helm \
+#     -f helm/values-dev.yaml --set image.tag=<sha>
 #
 # Cheapest possible footprint: no autoscaling, no PDB (a single dev
 # replica going down briefly is fine), ephemeral storage.

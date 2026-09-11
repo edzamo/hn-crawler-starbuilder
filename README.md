@@ -58,22 +58,26 @@ with a one-line Node script (no `curl` in the slim base image).
 
 ## Kubernetes (Helm)
 
-A single chart, `charts/hn-crawler`, cluster-agnostic (no hardcoded
+A single chart at `helm/`, cluster-agnostic (no hardcoded
 cloud storage class, no provider-specific annotations): `ConfigMap`
 (env vars), `Deployment` (readiness/liveness probes on `/health`,
 resource requests/limits), `Service` (ClusterIP by default), and an
 optional `PersistentVolumeClaim`.
 
 ```bash
-helm lint charts/hn-crawler
-helm template my-hn-crawler charts/hn-crawler          # render manifests locally
-helm install my-hn-crawler charts/hn-crawler            # onto whatever cluster kubectl's context points at
-helm upgrade my-hn-crawler charts/hn-crawler --set image.tag=v1.2.3
+helm lint helm
+helm template my-hn-crawler helm          # render manifests locally
+helm install my-hn-crawler helm            # onto whatever cluster kubectl's context points at
+helm upgrade my-hn-crawler helm --set image.tag=v1.2.3
 helm uninstall my-hn-crawler
 ```
 
-Everything environment-specific is a value, not a hardcoded field —
-see `charts/hn-crawler/values.yaml`. Notably `image.repository`/`tag`
+Exactly three environments — dev, test, prod — as `values-dev.yaml`,
+`values-test.yaml`, `values-prod.yaml`, each a small overlay of
+overrides on top of `values.yaml` (the chart's required defaults —
+every Helm chart needs one to be valid on its own; it isn't a fourth
+environment). Everything environment-specific is a value, not a
+hardcoded field. Notably `image.repository`/`tag`
 (point at your registry, not the local `hn-crawler-starbuilder:local`
 build, before installing outside a local cluster) and
 `persistence.enabled` (`false` by default: `usage.sqlite` lives on an
@@ -212,15 +216,19 @@ tests/
   unit/
   e2e/
   fixtures/
-charts/
-  hn-crawler/
-    Chart.yaml
-    values.yaml
-    templates/
-      _helpers.tpl
-      configmap.yaml
-      deployment.yaml
-      service.yaml
-      pvc.yaml
-      NOTES.txt
+helm/
+  Chart.yaml
+  values.yaml
+  values-dev.yaml
+  values-test.yaml
+  values-prod.yaml
+  templates/
+    _helpers.tpl
+    configmap.yaml
+    deployment.yaml
+    service.yaml
+    pvc.yaml
+    hpa.yaml
+    pdb.yaml
+    NOTES.txt
 ```

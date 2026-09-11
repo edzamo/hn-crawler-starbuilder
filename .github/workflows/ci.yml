@@ -40,9 +40,9 @@ jobs:
 
       - run: |
           set -euo pipefail
-          helm lint charts/hn-crawler
+          helm lint helm
           for env in dev test prod; do
-            helm lint charts/hn-crawler -f charts/hn-crawler/values-$env.yaml
+            helm lint helm -f helm/values-$env.yaml
           done
 
   docker-build:
